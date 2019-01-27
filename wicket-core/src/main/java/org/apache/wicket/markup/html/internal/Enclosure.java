@@ -16,11 +16,14 @@
  */
 package org.apache.wicket.markup.html.internal;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 import org.apache.wicket.Component;
 import org.apache.wicket.MarkupContainer;
 import org.apache.wicket.WicketRuntimeException;
+import org.apache.wicket.behavior.Behavior;
 import org.apache.wicket.markup.ComponentTag;
 import org.apache.wicket.markup.MarkupException;
 import org.apache.wicket.markup.MarkupStream;
@@ -95,6 +98,8 @@ public class Enclosure extends WebMarkupContainer implements IComponentResolver
 	/** Id of the child component that will control visibility of the enclosure */
 	private final String childId;
 
+	private final List<String> childrenIds = new ArrayList<>();
+
 	/**
 	 * Construct.
 	 * 
@@ -114,13 +119,35 @@ public class Enclosure extends WebMarkupContainer implements IComponentResolver
 		this.childId = childId;
 	}
 
+	@Override
+	protected void onInitialize() {
+		super.onInitialize();
+
+		final MarkupStream markupStream = new MarkupStream(getMarkup());
+
+		while (markupStream.hasMore())
+		{
+			markupStream.next();
+			if (markupStream.skipUntil(ComponentTag.class))
+			{
+				ComponentTag tag = markupStream.getTag();
+				if ((tag != null) && (tag.isOpen() || tag.isOpenClose()))
+				{
+					String tagId = tag.getId();
+					childrenIds.add(tagId);
+					markupStream.skipToMatchingCloseTag(tag);
+				}
+			}
+		}
+	}
+
 	/**
 	 * 
 	 * @return child id
 	 */
 	public final String getChildId()
 	{
-		return childId.toString();
+		return childId;
 	}
 
 	protected final Component getChild()
@@ -176,11 +203,20 @@ public class Enclosure extends WebMarkupContainer implements IComponentResolver
 	{
 		super.onConfigure();
 		final Component child = getChild();
+		child.setVisibilityAllowed(true);
 		
 		child.configure();
 		boolean childVisible = child.determineVisibility();
 		
 		setVisible(childVisible);
+
+		final MarkupContainer parent = getEnclosureParent();
+		for (String _childId : childrenIds) {
+			final Component _child = parent.get(_childId);
+			if (_child != null) {
+				_child.setVisibilityAllowed(childVisible);
+			}
+		}
 	}
 
 	@Override
@@ -242,7 +278,7 @@ public class Enclosure extends WebMarkupContainer implements IComponentResolver
 							if (fullChildId.equals(tagId))
 							{
 								ComponentTag fullComponentTag = new ComponentTag(tag);
-								fullComponentTag.setId(childId.toString());
+								fullComponentTag.setId(childId);
 
 								controller = ComponentResolvers.resolve(enclosureParent,
 									markupStream, fullComponentTag, new ResolverFilter()

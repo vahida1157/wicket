@@ -66,13 +66,15 @@ public class EnclosurePage_9 extends WebPage
 
 		add(form);
 
-		form.add(new CheckBox("input", new PropertyModel<Boolean>(this, "checkbox"))
+		form.add(new CheckBox("input", new PropertyModel<>(this, "checkbox"))
 		{
 			private static final long serialVersionUID = 1L;
 
-			/**
-			 * @see org.apache.wicket.Component#onBeforeRender()
-			 */
+			@Override
+			protected void onConfigure() {
+				super.onConfigure();
+			}
+
 			@Override
 			protected void onBeforeRender()
 			{

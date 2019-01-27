@@ -85,6 +85,7 @@ public class AjaxEnclosureTest extends WicketTestCase
 		{
 			// enclosure On
 			String doc = tester.getLastResponseAsString();
+			System.err.println("DOC:\n" + doc);
 			AjaxEnclosurePage_1 ajaxPage = (AjaxEnclosurePage_1)tester.getLastRenderedPage();
 			tester.assertContains(inlineEnclosureVisiblePattern);
 			assertVisible(ajaxPage.getLabel1(), true);

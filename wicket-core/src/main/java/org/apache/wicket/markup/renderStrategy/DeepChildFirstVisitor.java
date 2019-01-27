@@ -47,7 +47,7 @@ public abstract class DeepChildFirstVisitor implements IVisitor<Component, Void>
 	 */
 	public final Visit<Void> visit(final Component rootComponent)
 	{
-		Visit<Void> visitor = new Visit<Void>();
+		Visit<Void> visitor = new Visit<>();
 		return visit(rootComponent, visitor);
 	}
 

@@ -47,6 +47,7 @@ import org.apache.wicket.markup.WicketTag;
 import org.apache.wicket.markup.html.border.Border;
 import org.apache.wicket.markup.html.form.AutoLabelResolver;
 import org.apache.wicket.markup.resolver.ComponentResolvers;
+import org.apache.wicket.markup.resolver.IComponentResolver;
 import org.apache.wicket.model.IComponentInheritedModel;
 import org.apache.wicket.model.IModel;
 import org.apache.wicket.model.IWrapModel;
@@ -1250,7 +1251,13 @@ public abstract class MarkupContainer extends Component implements Iterable<Comp
 				Component originalChild = children();
 				List<Component> newChildren = new ArrayList<>(INITIAL_CHILD_LIST_CAPACITY);
 				newChildren.add(originalChild);
-				newChildren.add(child);
+				if (child instanceof IComponentResolver)
+				{
+					newChildren.add(0, child);
+				}
+				else {
+					newChildren.add(child);
+				}
 				children = newChildren;
 
 				// it is an addtion, so we need to notify the iterators of this change.
@@ -1282,7 +1289,13 @@ public abstract class MarkupContainer extends Component implements Iterable<Comp
 			 */
 			if (childrenList.size() < MAPIFY_THRESHOLD)
 			{
-				childrenList.add(child);
+				if (child instanceof IComponentResolver)
+				{
+					childrenList.add(0, child);
+				}
+				else {
+					childrenList.add(child);
+				}
 			}
 			else
 			{
