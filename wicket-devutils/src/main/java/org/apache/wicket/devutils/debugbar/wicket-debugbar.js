@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-;(function (jQuery, undefined) {
+;(function (undefined) {
 
 	'use strict';
 
@@ -51,32 +51,33 @@
 			}
 		}
 
-		jQuery('#wicketDebugBarCollapse').on("click", function() {
-			var content = jQuery('#wicketDebugBarContents');
+		Wicket.Event.add('wicketDebugBarCollapse', 'click', function() {
+			var content = Wicket.$('wicketDebugBarContents');
 			setExpandedCookie(!content.is(':visible'));
 			content.toggle(400);
 		});
 
-		jQuery('#wicketDebugBarRemove').on("click", function() {
-			var bar = jQuery('#wicketDebugBar');
+		Wicket.Event.add('wicketDebugBarRemove', 'click', function() {
+			var bar = Wicket.$('wicketDebugBar');
 			setExpandedCookie(!bar.is(':visible'));
-			bar.hide();
+			Wicket.DOM.hide(bar);
 		});
 
 	    // determine state and set it
 		if (getExpandedCookie() === 'false') {
-			jQuery('#wicketDebugBarContents').hide();
+			Wicket.DOM.hide(Wicket.$('wicketDebugBarContents'));
 		}
 		
 		var original = Wicket.Log.error;
 		Wicket.Log.error = function() {
 			original.apply(Wicket.Log, arguments);
-			
-			jQuery('#wicketDebugBar')
-				.addClass('wicketDebugBarError')
-				.one('animationend', function() {
-					jQuery(this).removeClass('wicketDebugBarError');
-				});
+
+			var el = Wicket.$('wicketDebugBar');
+			el.classList.add('wicketDebugBarError')
+			el.addEventListener('animationend', function() {
+				el.removeEventListener('animationend');
+				el.classList.remove('wicketDebugBarError');
+			});
 		};
 	};
-})(jQuery);
+})();
