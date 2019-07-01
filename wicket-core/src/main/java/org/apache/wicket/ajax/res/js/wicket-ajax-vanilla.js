@@ -2463,30 +2463,31 @@
 			 *      the event is always triggered when it reaches the selected element.
 			 */
 			add: function (element, type, fn, data, selector) {
+				var el = element;
+				if (typeof(element) === 'string') {
+					el = Wicket.$(element);
+				}
+				
 				if (type === 'domready') {
 					if (document.readyState !== 'loading') {
 						fn();
 					} else {
-						document.addEventListener('DOMContentLoaded', fn);
+						el.addEventListener('DOMContentLoaded', fn);
 					}
 				} else if (type === 'load' && isWindow(element)) {
 					if (document.readyState !== 'loading') {
 						fn();
 					} else {
-						document.addEventListener('load', fn);
+						el.addEventListener('load', fn);
 					}
 				} else {
-					var el = element;
-					if (typeof(element) === 'string') {
-						el = Wicket.$(element);
-					}
 
 					if (!el && Wicket.Log) {
 						Wicket.Log.error("Cannot bind a listener for event '%s' because the element is not in the DOM", type, element);
 					}
 
 					// FIXME: how to pass sub-selector and data to the native impl ?
-					Wicket.$(el).addEventListener(type, fn, selector, data);
+					el.addEventListener(type, fn, selector, data);
 				}
 				return element;
 			},
