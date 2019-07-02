@@ -517,8 +517,7 @@
 				name;
 			if (Array.isArray(parameters)) {
 				result = parameters;
-			}
-			else if (jQuery.isPlainObject(parameters)) {
+			} else {
 				for (name in parameters) {
 					if (name && parameters.hasOwnProperty(name)) {
 						value = parameters[name];
@@ -684,12 +683,7 @@
 			// collect the dynamic extra parameters
 			if (Array.isArray(attrs.dep)) {
 				var dynamicData = this._calculateDynamicParameters(attrs);
-				if (attrs.m.toLowerCase() === 'post') {
-					data = data.concat(dynamicData);
-				} else {
-					var separator = url.indexOf('?') > -1 ? '&' : '?';
-					url = url + separator + jQuery.param(dynamicData);
-				}
+				data = data.concat(dynamicData);
 			}
 
 			var wwwFormUrlEncoded; // undefined is jQuery's default
