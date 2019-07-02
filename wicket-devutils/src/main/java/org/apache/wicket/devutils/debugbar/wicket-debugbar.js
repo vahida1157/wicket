@@ -74,10 +74,12 @@
 
 			var el = Wicket.$('wicketDebugBar');
 			el.classList.add('wicketDebugBarError')
-			el.addEventListener('animationend', function() {
-				el.removeEventListener('animationend');
+			
+			var listener = function() {
+				el.removeEventListener('animationend', listener);
 				el.classList.remove('wicketDebugBarError');
-			});
+			};
+			el.addEventListener('animationend', listener);			
 		};
 	};
 })();
