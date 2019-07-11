@@ -603,12 +603,6 @@
 		doAjax: function (attrs) {
 
 			var
-				// the headers to use for each Ajax request
-				headers = {
-					'Wicket-Ajax': 'true',
-					'Wicket-Ajax-BaseURL': getAjaxBaseUrl()
-				},
-				
 				url = attrs.u,
 
 				// the request (extra) parameters
@@ -630,11 +624,6 @@
 				},
 				we = Wicket.Event,
 				topic = we.Topic;
-
-			if (Wicket.Focus.lastFocusId) {
-				// WICKET-6568 might contain non-ASCII
-				headers["Wicket-FocusedElementId"] = Wicket.Form.encode(Wicket.Focus.lastFocusId);
-			}
 
 			self._executeHandlers(attrs.bh, attrs);
 			we.publish(topic.AJAX_CALL_BEFORE, attrs);
@@ -686,7 +675,18 @@
 				data = data.concat(dynamicData);
 			}
 
-			var wwwFormUrlEncoded; // undefined is jQuery's default
+			Wicket.Log.info("Executing Ajax request");
+			Wicket.Log.debug(attrs);
+
+			var xhr = new XMLHttpRequest();
+			xhr.open(attrs.m, url, attrs.async);
+			xhr.setRequestHeader("Cache-Control", "no-cache");
+			xhr.setRequestHeader("Wicket-Ajax", "true");
+			xhr.setRequestHeader("Wicket-Ajax-BaseURL", getAjaxBaseUrl());
+			if (Wicket.Focus.lastFocusId) {
+				// WICKET-6568 might contain non-ASCII
+				xhr.setRequestHeader("Wicket-FocusedElementId", Wicket.Form.encode(Wicket.Focus.lastFocusId));
+			}
 			if (attrs.mp) {
 				try {
 					var formData = new FormData();
@@ -695,77 +695,73 @@
 					}
 					
 					data = formData;
-					wwwFormUrlEncoded = false;
 				} catch (exception) {
 					Wicket.Log.error("Ajax multipart not supported:", exception);
 				}
-			}
-
-			Wicket.Log.info("Executing Ajax request");
-			Wicket.Log.debug(attrs);
-
-			// execute the request
-			var jqXHR = jQuery.ajax({
-				url: url,
-				type: attrs.m,
-				context: self,
-				processData: wwwFormUrlEncoded,
-				contentType: wwwFormUrlEncoded,
+			} else {
+				xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
 				
-				beforeSend: function (jqXHR, settings) {
-					self._executeHandlers(attrs.bsh, attrs, jqXHR, settings);
-					we.publish(topic.AJAX_CALL_BEFORE_SEND, attrs, jqXHR, settings);
-
-					if (attrs.i) {
-						// show the indicator
-						Wicket.DOM.showIncrementally(attrs.i);
+				var encoded = '';
+				for (var d = 0; d < data.length; d++) {
+					if (encoded.length > 0) {
+						encoded += '&';
 					}
-				},
-				data: data,
-				dataType: attrs.dt,
-				async: attrs.async,
-				timeout: attrs.rt,
-				cache: false,
-				headers: headers,
-				success: function(data, textStatus, jqXHR) {
-					if (attrs.wr) {
-						self.processAjaxResponse(data, textStatus, jqXHR, context);
-					} else {
-						self._executeHandlers(attrs.sh, attrs, jqXHR, data, textStatus);
-						we.publish(topic.AJAX_CALL_SUCCESS, attrs, jqXHR, data, textStatus);
-					}
-				},
-				error: function(jqXHR, textStatus, errorMessage) {
-					if (jqXHR.status === 301 && jqXHR.getResponseHeader('Ajax-Location')) {
-						self.processAjaxResponse(data, textStatus, jqXHR, context);
-					} else {
-						self.failure(context, jqXHR, errorMessage, textStatus);
-					}
-				},
-				complete: function (jqXHR, textStatus) {
-
-					context.steps.push(function (notify) {
-						if (attrs.i && context.isRedirecting !== true) {
-							Wicket.DOM.hideIncrementally(attrs.i);
-						}
-
-						self._executeHandlers(attrs.coh, attrs, jqXHR, textStatus);
-						we.publish(topic.AJAX_CALL_COMPLETE, attrs, jqXHR, textStatus);
-
-						self.done(attrs);
-						return FunctionsExecuter.DONE;
-					}.bind(self));
-
-					var executer = new FunctionsExecuter(context.steps);
-					executer.start();
+					encoded += Wicket.Form.encode(data[d].name) + '=' + Wicket.Form.encode(data[d].value);
 				}
+				data = encoded;
+			}
+			xhr.timeout = attrs.rt;
+			xhr.addEventListener("load", function() {
+				if (xhr.status == 200) {
+					if (attrs.wr) {
+						self.processAjaxResponse(xhr, context);
+					} else {
+						self._executeHandlers(attrs.sh, attrs, xhr, xhr.response, xhr.statusText);
+						we.publish(topic.AJAX_CALL_SUCCESS, attrs, xhr, xhr.response, xhr.statusText);
+					}
+				} else {
+					self.failure(context, xhr, xhr.statusText);
+				}
+
+				self._complete(attrs, xhr, context, xhr.statusText);
+			});
+			xhr.addEventListener("error", function() {
+				self.failure(context, xhr, xhr.statusText);
+				
+				self._complete(attrs, xhr, context, xhr.statusText);
 			});
 
+			self._executeHandlers(attrs.bsh, attrs, xhr);
+			we.publish(topic.AJAX_CALL_BEFORE_SEND, attrs, xhr);
+			if (attrs.i) {
+				// show the indicator
+				Wicket.DOM.showIncrementally(attrs.i);
+			}
+
+			xhr.send(data);
+			
 			// execute after handlers right after the Ajax request is fired
 			self._executeHandlers(attrs.ah, attrs);
 			we.publish(topic.AJAX_CALL_AFTER, attrs);
 
-			return jqXHR;
+			return xhr;
+		},
+		
+		_complete: function(attrs, xhr, context, textStatus) {
+			context.steps.push(function (notify) {
+				if (attrs.i && context.isRedirecting !== true) {
+					Wicket.DOM.hideIncrementally(attrs.i);
+				}
+
+				this._executeHandlers(attrs.coh, attrs, xhr, textStatus);
+				Wicket.Event.publish(Wicket.Event.Topic.AJAX_CALL_COMPLETE, attrs, xhr, textStatus);
+
+				this.done(attrs);
+				return FunctionsExecuter.DONE;
+			}.bind(this));
+
+			var executer = new FunctionsExecuter(context.steps);
+			executer.start();				
 		},
 
 		/**
@@ -787,65 +783,60 @@
 		/**
 		 * Method that processes the <ajax-response> in the context of an XMLHttpRequest.
 		 *
-		 * @param data {XmlDocument} - the <ajax-response> XML document
-		 * @param textStatus {String} - the response status as text (e.g. 'success', 'parsererror', etc.)
-		 * @param jqXHR {Object} - the jQuery wrapper around XMLHttpRequest
+		 * @param xhr {Object} - the XMLHttpRequest
 		 * @param context {Object} - the request context with the Ajax request attributes and the FunctionExecuter's steps
 		 */
-		processAjaxResponse: function (data, textStatus, jqXHR, context) {
+		processAjaxResponse: function (xhr, context) {
 
-			if (jqXHR.readyState === 4) {
+			// first try to get the redirect header
+			var redirectUrl;
+			try {
+				redirectUrl = xhr.getResponseHeader('Ajax-Location');
+			} catch (ignore) { // might happen in older mozilla
+			}
 
-				// first try to get the redirect header
-				var redirectUrl;
-				try {
-					redirectUrl = jqXHR.getResponseHeader('Ajax-Location');
-				} catch (ignore) { // might happen in older mozilla
-				}
+			// the redirect header was set, go to new url
+			if (typeof(redirectUrl) !== "undefined" && redirectUrl !== null && redirectUrl !== "") {
 
-				// the redirect header was set, go to new url
-				if (typeof(redirectUrl) !== "undefined" && redirectUrl !== null && redirectUrl !== "") {
+				// In case the page isn't really redirected. For example say the redirect is to an octet-stream.
+				// A file download popup will appear but the page in the browser won't change.
+				this.success(context);
 
-					// In case the page isn't really redirected. For example say the redirect is to an octet-stream.
-					// A file download popup will appear but the page in the browser won't change.
-					this.success(context);
+				var withScheme  = /^[a-z][a-z0-9+.-]*:\/\//;  // checks whether the string starts with a scheme
 
-					var withScheme  = /^[a-z][a-z0-9+.-]*:\/\//;  // checks whether the string starts with a scheme
-
-					// support/check for non-relative redirectUrl like as provided and needed in a portlet context
-					if (redirectUrl.charAt(0) === '/' || withScheme.test(redirectUrl)) {
-						context.isRedirecting = true;
-						Wicket.Ajax.redirect(redirectUrl);
-					}
-					else {
-						var urlDepth = 0;
-						while (redirectUrl.substring(0, 3) === "../") {
-							urlDepth++;
-							redirectUrl = redirectUrl.substring(3);
-						}
-						// Make this a string.
-						var calculatedRedirect = window.location.pathname;
-						while (urlDepth > -1) {
-							urlDepth--;
-							var i = calculatedRedirect.lastIndexOf("/");
-							if (i > -1) {
-								calculatedRedirect = calculatedRedirect.substring(0, i);
-							}
-						}
-						calculatedRedirect += "/" + redirectUrl;
-
-						context.isRedirecting = true;
-						Wicket.Ajax.redirect(calculatedRedirect);
-					}
+				// support/check for non-relative redirectUrl like as provided and needed in a portlet context
+				if (redirectUrl.charAt(0) === '/' || withScheme.test(redirectUrl)) {
+					context.isRedirecting = true;
+					Wicket.Ajax.redirect(redirectUrl);
 				}
 				else {
-					// no redirect, just regular response
-					Wicket.Log.info("Received ajax response (%s characters)", jqXHR.responseText.length);
-					Wicket.Log.debug(jqXHR.responseXML);
+					var urlDepth = 0;
+					while (redirectUrl.substring(0, 3) === "../") {
+						urlDepth++;
+						redirectUrl = redirectUrl.substring(3);
+					}
+					// Make this a string.
+					var calculatedRedirect = window.location.pathname;
+					while (urlDepth > -1) {
+						urlDepth--;
+						var i = calculatedRedirect.lastIndexOf("/");
+						if (i > -1) {
+							calculatedRedirect = calculatedRedirect.substring(0, i);
+						}
+					}
+					calculatedRedirect += "/" + redirectUrl;
 
-					// invoke the loaded callback with an xml document
-					return this.loadedCallback(data, context);
+					context.isRedirecting = true;
+					Wicket.Ajax.redirect(calculatedRedirect);
 				}
+			}
+			else {
+				// no redirect, just regular response
+				Wicket.Log.info("Received ajax response (%s characters)", xhr.responseText.length);
+				Wicket.Log.debug(xhr.responseXML);
+
+				// invoke the loaded callback with an xml document
+				return this.loadedCallback(xhr.responseXML, context);
 			}
 		},
 
@@ -862,7 +853,7 @@
 
 				// the root element must be <ajax-response
 				if (isUndef(root) || root.tagName !== "ajax-response") {
-					this.failure(context, null, "Could not find root <ajax-response> element", null);
+					this.failure(context, null, "Could not find root <ajax-response> element");
 					return;
 				}
 
@@ -905,7 +896,7 @@
 				this.success(context);
 
 			} catch (exception) {
-				this.failure(context, null, exception, null);
+				this.failure(context, null, exception);
 			}
 		},
 
@@ -926,14 +917,14 @@
 		},
 
 		// On ajax request failure
-		failure: function (context, jqXHR, errorMessage, textStatus) {
+		failure: function (context, xhr, errorMessage) {
 			context.steps.push(function (notify) {
 				if (errorMessage) {
 					Wicket.Log.error("Wicket.Ajax.Call.failure: Error while parsing response: %s", errorMessage);
 				}
 				var attrs = context.attrs;
-				this._executeHandlers(attrs.fh, attrs, jqXHR, errorMessage, textStatus);
-				Wicket.Event.publish(Wicket.Event.Topic.AJAX_CALL_FAILURE, attrs, jqXHR, errorMessage, textStatus);
+				this._executeHandlers(attrs.fh, attrs, xhr, errorMessage, xhr.textStatus);
+				Wicket.Event.publish(Wicket.Event.Topic.AJAX_CALL_FAILURE, attrs, xhr, errorMessage, xhr.textStatus);
 
 				return FunctionsExecuter.DONE;
 			}.bind(this));
@@ -1240,17 +1231,12 @@
 			serializeSelect: function (select){
 				var result = [];
 				if (select) {
-					var $select = jQuery(select);
-					if ($select.length > 0 && $select.prop('disabled') === false) {
-						var name = $select.prop('name');
-						var values = $select.val();
-						if (Array.isArray(values)) {
-							for (var v = 0; v < values.length; v++) {
-								var value = values[v];
-								result.push( { name: name, value: value } );
+					if (!select.disabled) {
+						var name = select.name;
+						for (var o = 0; o < select.options.length; o++) {
+							if (select.options[o].selected) {
+								result.push( { name: name, value: select.options[o].value } );
 							}
-						} else {
-							result.push( { name: name, value: values } );
 						}
 					}
 				}
@@ -1271,14 +1257,12 @@
 			serializeInput: function (input) {
 				var result = [];
 				if (input && input.type) {
-					var $input = jQuery(input);
-					
 					if (input.type === 'file') {
 						for (var f = 0; f < input.files.length; f++) {
 							result.push({"name" : input.name, "value" : input.files[f]});
 						}
 					} else if (!(input.type === 'image' || input.type === 'submit')) {
-						result = $input.serializeArray();
+						result = {"name" : input.name, "value" : input.value};
 					}
 				}
 				return result;
@@ -1422,13 +1406,9 @@
 				e = Wicket.$(e);
 				if (e !== null) {
 					if (isUndef(display)) {
-						// no explicit 'display' value is requested so
-						// use jQuery. It has special logic to decide which is the
-						// best value for an HTMLElement
-						jQuery(e).show();
-					} else {
-						e.style.display = display;
+						display = '';
 					}
+					e.style.display = display;
 				}
 			},
 
@@ -1436,7 +1416,7 @@
 			hide: function (e) {
 				e = Wicket.$(e);
 				if (e !== null) {
-					jQuery(e).hide();
+					e.style.display = 'none';
 				}
 			},
 
@@ -1536,9 +1516,7 @@
 					document.title = titleText;
 					return;
 				} else {
-					// jQuery 1.9+ expects '<' as the very first character in text
-					var $newElement = jQuery(text.trim());
-					jQuery(element).replaceWith($newElement);
+					element.outerHTML = text.trim();
 				}
 
 				var newElement = Wicket.$(element.id);
@@ -2430,7 +2408,7 @@
 			 * If no event is given as argument (IE), window.event is returned.
 			 */
 			fix: function (evt) {
-				return jQuery.event.fix(evt || window.event);
+				return evt || window.event;
 			},
 
 			fire: function (element, event) {
