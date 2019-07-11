@@ -1537,9 +1537,7 @@
 					return;
 				} else {
 					// jQuery 1.9+ expects '<' as the very first character in text
-					var cleanedText = jQuery.trim(text);
-
-					var $newElement = jQuery(cleanedText);
+					var $newElement = jQuery(text.trim());
 					jQuery(element).replaceWith($newElement);
 				}
 
