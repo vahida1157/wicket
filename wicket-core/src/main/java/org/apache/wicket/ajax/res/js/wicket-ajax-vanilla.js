@@ -678,29 +678,18 @@
 			Wicket.Log.info("Executing Ajax request");
 			Wicket.Log.debug(attrs);
 
-			var xhr = new XMLHttpRequest();
-			xhr.open(attrs.m, url, attrs.async);
-			xhr.setRequestHeader("Cache-Control", "no-cache");
-			xhr.setRequestHeader("Wicket-Ajax", "true");
-			xhr.setRequestHeader("Wicket-Ajax-BaseURL", getAjaxBaseUrl());
-			if (Wicket.Focus.lastFocusId) {
-				// WICKET-6568 might contain non-ASCII
-				xhr.setRequestHeader("Wicket-FocusedElementId", Wicket.Form.encode(Wicket.Focus.lastFocusId));
-			}
+			var body;
+			var contentType;
 			if (attrs.mp) {
 				try {
-					var formData = new FormData();
+					body = new FormData();
 					for (var i = 0; i < data.length; i++) {
-						formData.append(data[i].name, data[i].value || "");
+						body.append(data[i].name, data[i].value || "");
 					}
-					
-					data = formData;
 				} catch (exception) {
 					Wicket.Log.error("Ajax multipart not supported:", exception);
 				}
 			} else {
-				xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
-				
 				var encoded = '';
 				for (var d = 0; d < data.length; d++) {
 					if (encoded.length > 0) {
@@ -708,7 +697,29 @@
 					}
 					encoded += Wicket.Form.encode(data[d].name) + '=' + Wicket.Form.encode(data[d].value);
 				}
-				data = encoded;
+
+				if ("POST" === attrs.m) {
+					contentType = 'application/x-www-form-urlencoded';
+					body = encoded;
+				} else {
+					if (url.indexOf("?") === -1) {
+						url += "?" + encoded;
+					} else {
+						url += "&" + encoded;
+					}
+				}
+			}
+			var xhr = new XMLHttpRequest();
+			xhr.open(attrs.m, url, attrs.async);
+			if (contentType) {
+				xhr.setRequestHeader('Content-type', contentType);
+			}
+			xhr.setRequestHeader("Cache-Control", "no-cache");
+			xhr.setRequestHeader("Wicket-Ajax", "true");
+			xhr.setRequestHeader("Wicket-Ajax-BaseURL", getAjaxBaseUrl());
+			if (Wicket.Focus.lastFocusId) {
+				// WICKET-6568 might contain non-ASCII
+				xhr.setRequestHeader("Wicket-FocusedElementId", Wicket.Form.encode(Wicket.Focus.lastFocusId));
 			}
 			xhr.timeout = attrs.rt;
 			xhr.addEventListener("load", function() {
@@ -738,7 +749,7 @@
 				Wicket.DOM.showIncrementally(attrs.i);
 			}
 
-			xhr.send(data);
+			xhr.send(body);
 			
 			// execute after handlers right after the Ajax request is fired
 			self._executeHandlers(attrs.ah, attrs);
@@ -1851,7 +1862,7 @@
 							// an element with same href attribute is in document, skip it
 							return FunctionsExecuter.DONE;
 						} else if (oldNode) {
-							// remove another external element with the same id but different href
+							// remove existing element
 							oldNode.parentNode.removeChild(oldNode);
 						}
 
@@ -1859,10 +1870,8 @@
 						var css = Wicket.Head.createElement("link");
 
 						// copy supplied attributes only.
-						var attributes = jQuery(node).prop("attributes");
-						var $css = jQuery(css);
-						Array.prototype.forEach.call(attributes, function(attr) {
-							$css.attr(attr.name, attr.value);
+						Array.prototype.forEach.call(node.attributes, function(attr) {
+							css[attr.name] = attr.value;
 						});
 
 						// add element to head
@@ -1932,7 +1941,7 @@
 								// an element with same src attribute is in document, skip it
 								return FunctionsExecuter.DONE;
 							} else if (oldNode) {
-								// remove another external element with the same id but different src
+								// remove existing element
 								oldNode.parentNode.removeChild(oldNode);
 							}
 						}
@@ -2002,16 +2011,17 @@
 
 				processMeta: function (context, node) {
 					context.steps.push(function (notify) {
-						var meta = Wicket.Head.createElement("meta"),
-							$meta = jQuery(meta),
-							attrs = jQuery(node).prop("attributes"),
-							name = node.getAttribute("name");
-
-						if(name) {
-							jQuery('meta[name="' + name + '"]').remove();
+						var res = Wicket.Head.containsElement(node, "name");
+						var oldNode = res.oldNode;
+						if (oldNode) {
+							// remove existing element
+							oldNode.parentNode.removeChild(oldNode);
 						}
-						Array.prototype.forEach.call(attrs, function(attr) {
-							$meta.attr(attr.name, attr.value);
+						
+						var meta = Wicket.Head.createElement("meta");
+
+						Array.prototype.forEach.call(node.attributes, function(attr) {
+							meta[attr.name] = attr.value;
 						});
 
 						Wicket.Head.addElement(meta);
@@ -2089,7 +2099,8 @@
 						var loadedUrl_ = node.getAttribute(mandatoryAttribute+"_");
 						if (loadedUrl === attr || loadedUrl_ === attr) {
 							return {
-								contains: true
+								contains: true,
+								oldNode: node
 							};
 						} else if (elementId && elementId === node.getAttribute("id")) {
 							return {
@@ -2372,14 +2383,13 @@
 			idCounter: 0,
 
 			getId: function (element) {
-				var $el = jQuery(element),
-					id = $el.prop("id");
+				var id = element.id;
 
 				if (typeof(id) === "string" && id.length > 0) {
 					return id;
 				} else {
 					id = "wicket-generated-id-" + Wicket.Event.idCounter++;
-					$el.prop("id", id);
+					element.id = id;
 					return id;
 				}
 			},
@@ -2412,7 +2422,7 @@
 			},
 
 			fire: function (element, event) {
-				jQuery(element).trigger(event);
+				element.dispatchEvent(new Event('event', { 'bubbles': true }));
 			},
 
 			/**
@@ -2455,7 +2465,9 @@
 					}
 
 					// FIXME: how to pass sub-selector and data to the native impl ?
-					el.addEventListener(type, fn, selector, data);
+					type.split(" ").forEach(function(t) {
+						el.addEventListener(t, fn, selector, data);
+					});
 				}
 				return element;
 			},
