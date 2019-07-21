@@ -221,8 +221,8 @@ public class UploadProgressBar extends Panel
 	{
 		super.renderHead(response);
 
-		CoreLibrariesContributor.contributeAjax(getApplication(), response);
 		response.render(JavaScriptHeaderItem.forReference(JS));
+		
 		ResourceReference css = getCss();
 		if (css != null)
 		{

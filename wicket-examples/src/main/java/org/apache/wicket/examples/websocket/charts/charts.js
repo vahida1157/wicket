@@ -88,15 +88,15 @@ function drawChart() {
 		updateChart();
 	};
 
-	Wicket.Event.subscribe("/websocket/open", function(jqEvent) {
+	Wicket.Event.subscribe("/websocket/open", function(event) {
 		// show the initial state of the chart
 		updateChart();
 	});
 
-	Wicket.Event.subscribe("/websocket/message", function(jqEvent, message) {
+	Wicket.Event.subscribe("/websocket/message", function(event) {
 		// new record is pushed by the server
 
-		var record = jQuery.parseJSON(message);
+		var record = JSON.parse(event.detail[0]);
 		if (record && record.year) {
 			updateChartData(record);
 		}

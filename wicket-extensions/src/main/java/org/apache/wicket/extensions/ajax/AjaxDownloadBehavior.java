@@ -17,7 +17,9 @@
 package org.apache.wicket.extensions.ajax;
 
 import java.util.Locale;
+
 import javax.servlet.http.Cookie;
+
 import org.apache.wicket.Component;
 import org.apache.wicket.IRequestListener;
 import org.apache.wicket.WicketRuntimeException;
@@ -36,8 +38,8 @@ import org.apache.wicket.request.mapper.parameter.PageParameters;
 import org.apache.wicket.request.resource.ContentDisposition;
 import org.apache.wicket.request.resource.IResource;
 import org.apache.wicket.request.resource.IResource.Attributes;
+import org.apache.wicket.request.resource.JavaScriptResourceReference;
 import org.apache.wicket.request.resource.ResourceReference;
-import org.apache.wicket.resource.JQueryPluginResourceReference;
 import org.apache.wicket.util.lang.Args;
 
 import com.github.openjson.JSONObject;
@@ -115,7 +117,7 @@ public class AjaxDownloadBehavior extends AbstractDefaultAjaxBehavior
 	 */
 	private static final String RESOURCE_PARAMETER_NAME = "wicket-ajaxdownload";
 
-	private static final ResourceReference JS = new JQueryPluginResourceReference(
+	private static final ResourceReference JS = new JavaScriptResourceReference(
 		AjaxDownloadBehavior.class, "wicket-ajaxdownload.js");
 
 	private final ResourceReference resourceReference;

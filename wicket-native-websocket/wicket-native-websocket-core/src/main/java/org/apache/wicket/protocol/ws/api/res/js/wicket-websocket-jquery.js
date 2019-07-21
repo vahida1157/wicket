@@ -26,15 +26,13 @@
 		throw 'Wicket.WebSocket needs wicket-ajax.js as prerequisite.';
 	}
 
-	jQuery.extend(Wicket.Event.Topic, {
-		WebSocket: {
-			Opened:       '/websocket/open',
-			Message:      '/websocket/message',
-			Closed:       '/websocket/closed',
-			Error:        '/websocket/error',
-			NotSupported: '/websocket/notsupported'
-		}
-	});
+	Wicket.Event.Topic.WebSocket = {
+		Opened:       '/websocket/open',
+		Message:      '/websocket/message',
+		Closed:       '/websocket/closed',
+		Error:        '/websocket/error',
+		NotSupported: '/websocket/notsupported'
+	};
 
 	Wicket.WebSocket = Wicket.Class.create();
 
@@ -44,7 +42,7 @@
 
 		ws: null,
 
-		initialize: function () {
+		initialize: function (config) {
 			var topics = Wicket.Event.Topic.WebSocket;
 
 			if (('WebSocket' in window)) {
@@ -52,9 +50,8 @@
 				var self = this,
 					url,
 					protocol,
-					WWS = Wicket.WebSocket,
-					port = WWS.port || document.location.port,
-					securePort = WWS.securePort || document.location.port,
+					port = config.port || document.location.port,
+					securePort = config.securePort || document.location.port,
 					_port;
 
 				protocol = document.location.protocol
@@ -66,20 +63,20 @@
 				} else {
 					_port = port ? ':' + port : '';
 				}
-				url = protocol + '//' + document.location.hostname + _port + WWS.contextPath + WWS.filterPrefix + '/wicket/websocket';
+				url = protocol + '//' + document.location.hostname + _port + config.contextPath + config.filterPrefix + '/wicket/websocket';
 
-				if (WWS.sessionId !== '') {
-					url += ';jsessionid=' + encodeURIComponent(WWS.sessionId);
+				if (config.sessionId !== '') {
+					url += ';jsessionid=' + encodeURIComponent(config.sessionId);
 				}
 
-				if (WWS.pageId !== false) {
-					url += '?pageId=' + encodeURIComponent(WWS.pageId);
-				} else if (WWS.resourceName) {
-					url += '?resourceName=' + encodeURIComponent(WWS.resourceName);
+				if (config.pageId !== false) {
+					url += '?pageId=' + encodeURIComponent(config.pageId);
+				} else if (config.resourceName) {
+					url += '?resourceName=' + encodeURIComponent(config.resourceName);
 				}
 
-				url += '&wicket-ajax-baseurl=' + encodeURIComponent(WWS.baseUrl);
-				url += '&wicket-app-name=' + encodeURIComponent(WWS.appName);
+				url += '&wicket-ajax-baseurl=' + encodeURIComponent(config.baseUrl);
+				url += '&wicket-app-name=' + encodeURIComponent(config.appName);
 
 				self.ws = new WebSocket(url);
 
@@ -153,9 +150,9 @@
 		}
 	};
 
-	Wicket.WebSocket.createDefaultConnection = function () {
+	Wicket.WebSocket.createDefaultConnection = function (config) {
 		if (!Wicket.WebSocket.INSTANCE) {
-			Wicket.WebSocket.INSTANCE = new Wicket.WebSocket();
+			Wicket.WebSocket.INSTANCE = new Wicket.WebSocket(config);
 		}
 	};
 

@@ -502,13 +502,10 @@
 		},
 
 		/**
-		 * Converts an object (hash) to an array suitable for consumption
-		 * by jQuery.param()
+		 * Converts an object (hash) to an array.
 		 *
 		 * @param {Object} parameters - the object to convert to an array of
 		 *      name -> value pairs.
-		 * @see jQuery.param
-		 * @see jQuery.serializeArray
 		 * @private
 		 */
 		_asParamArray: function(parameters) {
@@ -1619,7 +1616,6 @@
 
 			/**
 			 * Reads the text from the node's children nodes.
-			 * Used instead of jQuery.text() because it is very slow in IE10/11.
 			 * WICKET-5132, WICKET-5510
 			 * @param node {DOMElement} the root node
 			 */
@@ -1675,7 +1671,6 @@
 							evt.preventDefault();
 						} catch (ignore) {
 							// WICKET-4986
-							// jquery fails 'member not found' with calls on busy channel
 						}
 					}
 

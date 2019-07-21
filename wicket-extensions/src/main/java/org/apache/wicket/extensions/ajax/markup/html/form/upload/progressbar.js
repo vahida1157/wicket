@@ -80,9 +80,12 @@
 		},
 
 		_createIFrame : function (iframeName) {
-			var $iframe = jQuery('<iframe name="'+iframeName+'" id="'+iframeName+
-				'" src="about:blank" style="position: absolute; top: -9999px; left: -9999px;"></iframe>');
-			return $iframe[0];
+			var iframe = document.createElement('iframe');
+			iframe.setAttribute('name', iframeName);
+			iframe.setAttribute('id', iframeName);
+			iframe.setAttribute('src', "about:blank");
+			iframe.setAttribute('stle', "position: absolute; top: -9999px; left: -9999px;");
+			return iframe;
 		},
 
 		load : function() {

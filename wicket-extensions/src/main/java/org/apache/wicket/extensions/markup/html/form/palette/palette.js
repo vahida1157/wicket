@@ -22,146 +22,148 @@
 		window.Wicket = { };
 	}
 
-	if (typeof(Wicket.Palette) === "undefined") {
-		Wicket.Palette = { };
+	if (Wicket.Palette) {
+		return;
 	}
 
-	Wicket.Palette.$ = function(id) {
-		return document.getElementById(id);
-	};
+	Wicket.Palette = {
+		$: function(id) {
+			return document.getElementById(id);
+		},
 
-	Wicket.Palette.choicesOnFocus=function(choicesId, selectionId, recorderId) {
-		Wicket.Palette.clearSelectionHelper(Wicket.Palette.$(selectionId));
-	};
+		choicesOnFocus: function(choicesId, selectionId, recorderId) {
+			Wicket.Palette.clearSelectionHelper(Wicket.Palette.$(selectionId));
+		},
 
-	Wicket.Palette.selectionOnFocus=function(choicesId, selectionId, recorderId) {
-		Wicket.Palette.clearSelectionHelper(Wicket.Palette.$(choicesId));
-	};
+		selectionOnFocus: function(choicesId, selectionId, recorderId) {
+			Wicket.Palette.clearSelectionHelper(Wicket.Palette.$(choicesId));
+		},
 
-	Wicket.Palette.add=function(choicesId, selectionId, recorderId) {
-		var choices=Wicket.Palette.$(choicesId);
-		var selection=Wicket.Palette.$(selectionId);
+		add: function(choicesId, selectionId, recorderId) {
+			var choices=Wicket.Palette.$(choicesId);
+			var selection=Wicket.Palette.$(selectionId);
 
-		if (Wicket.Palette.moveHelper(choices, selection)) {
-			var recorder=Wicket.Palette.$(recorderId);
-			Wicket.Palette.updateRecorder(selection, recorder);
-		}
-	};
+			if (Wicket.Palette.moveHelper(choices, selection)) {
+				var recorder=Wicket.Palette.$(recorderId);
+				Wicket.Palette.updateRecorder(selection, recorder);
+			}
+		},
 
-	Wicket.Palette.remove=function(choicesId, selectionId, recorderId) {
-		var choices=Wicket.Palette.$(choicesId);
-		var selection=Wicket.Palette.$(selectionId);
+		remove: function(choicesId, selectionId, recorderId) {
+			var choices=Wicket.Palette.$(choicesId);
+			var selection=Wicket.Palette.$(selectionId);
+	
+			if (Wicket.Palette.moveHelper(selection, choices)) {
+				var recorder=Wicket.Palette.$(recorderId);
+				Wicket.Palette.updateRecorder(selection, recorder);
+			}
+		},
+	
+		moveHelper: function(source, dest) {
+			var dirty=false;
+			for (var i=0;i<source.options.length;i++) {
+				if (source.options[i].selected && !source.options[i].disabled) {
+					dest.appendChild(source.options[i]);
+					i--;
+					dirty=true;
+				}
+			}
+			return dirty;
+		},
+	
+		moveUp: function(choicesId, selectionId, recorderId) {
+			var selection=Wicket.Palette.$(selectionId);
+	
+			if (Wicket.Palette.moveUpHelper(selection)) {
+				var recorder=Wicket.Palette.$(recorderId);
+				Wicket.Palette.updateRecorder(selection, recorder);
+			}
+		},
+	
+		moveUpHelper: function(box) {
+			var dirty=false;
+			for (var i=0;i<box.options.length;i++) {
+				if (box.options[i].selected && i>0) {
+					if(!box.options[i-1].selected) {
+						box.insertBefore(box.options[i],box.options[i-1]);
+						dirty=true;
+						box.focus();
+					}
+				}
+			}
+			return dirty;
+		},
+	
+		moveDown: function(choicesId, selectionId, recorderId) {
+			var selection=Wicket.Palette.$(selectionId);
+	
+			if (Wicket.Palette.moveDownHelper(selection)) {
+				var recorder=Wicket.Palette.$(recorderId);
+				Wicket.Palette.updateRecorder(selection, recorder);
+			}
+		},
+	
+		moveDownHelper: function(box) {
+			var dirty=false;
+			for (var i=box.options.length-1;i>=0;i--) {
+				if (box.options[i].selected && i<box.options.length-1) {
+					if(!box.options[i+1].selected) {
+						box.insertBefore(box.options[i+1],box.options[i]);
+						dirty=true;
+					}
+				}
+			}
+			return dirty;
+		},
 
-		if (Wicket.Palette.moveHelper(selection, choices)) {
-			var recorder=Wicket.Palette.$(recorderId);
-			Wicket.Palette.updateRecorder(selection, recorder);
-		}
-	};
-
-	Wicket.Palette.moveHelper=function(source, dest) {
-		var dirty=false;
-		for (var i=0;i<source.options.length;i++) {
-			if (source.options[i].selected && !source.options[i].disabled) {
+		updateRecorder: function(selection, recorder) {
+			recorder.value="";
+			for (var i=0;i<selection.options.length;i++) {
+				recorder.value=recorder.value+selection.options[i].value;
+				if (i+1<selection.options.length) {
+					recorder.value=recorder.value+",";
+				}
+			}
+	
+			recorder.dispatchEvent(new Event('change', { 'bubbles': true }));
+		},
+	
+		clearSelectionHelper: function(box) {
+			for (var i=0;i<box.options.length;i++) {
+				box.options[i].selected=false;
+			}
+		},
+	
+		addAll: function(choicesId, selectionId, recorderId) {
+			var palette = Wicket.Palette;
+			var choices = palette.$(choicesId);
+			var selection = palette.$(selectionId);
+	
+			if (palette.moveAllHelper(choices, selection)) {
+				var recorder = palette.$(recorderId);
+				palette.updateRecorder(selection, recorder);
+			}
+		},
+	
+		removeAll: function(choicesId, selectionId, recorderId) {
+			var palette = Wicket.Palette;
+			var choices = palette.$(choicesId);
+			var selection = palette.$(selectionId);
+	
+			if (palette.moveAllHelper(selection, choices)) {
+				var recorder = palette.$(recorderId);
+				palette.updateRecorder(selection, recorder);
+			}
+		},
+	
+		moveAllHelper: function(source, dest) {
+			var dirty = false;
+			for (var i = 0;i < source.options.length; i++) {
 				dest.appendChild(source.options[i]);
 				i--;
-				dirty=true;
+				dirty = true;
 			}
+			return dirty;
 		}
-		return dirty;
-	};
-
-	Wicket.Palette.moveUp=function(choicesId, selectionId, recorderId) {
-		var selection=Wicket.Palette.$(selectionId);
-
-		if (Wicket.Palette.moveUpHelper(selection)) {
-			var recorder=Wicket.Palette.$(recorderId);
-			Wicket.Palette.updateRecorder(selection, recorder);
-		}
-	};
-
-	Wicket.Palette.moveUpHelper=function(box) {
-		var dirty=false;
-		for (var i=0;i<box.options.length;i++) {
-			if (box.options[i].selected && i>0) {
-				if(!box.options[i-1].selected) {
-					box.insertBefore(box.options[i],box.options[i-1]);
-					dirty=true;
-					box.focus();
-				}
-			}
-		}
-		return dirty;
-	};
-
-	Wicket.Palette.moveDown=function(choicesId, selectionId, recorderId) {
-		var selection=Wicket.Palette.$(selectionId);
-
-		if (Wicket.Palette.moveDownHelper(selection)) {
-			var recorder=Wicket.Palette.$(recorderId);
-			Wicket.Palette.updateRecorder(selection, recorder);
-		}
-	};
-
-	Wicket.Palette.moveDownHelper=function(box) {
-		var dirty=false;
-		for (var i=box.options.length-1;i>=0;i--) {
-			if (box.options[i].selected && i<box.options.length-1) {
-				if(!box.options[i+1].selected) {
-					box.insertBefore(box.options[i+1],box.options[i]);
-					dirty=true;
-				}
-			}
-		}
-		return dirty;
-	};
-
-	Wicket.Palette.updateRecorder=function(selection, recorder) {
-		recorder.value="";
-		for (var i=0;i<selection.options.length;i++) {
-			recorder.value=recorder.value+selection.options[i].value;
-			if (i+1<selection.options.length) {
-				recorder.value=recorder.value+",";
-			}
-		}
-
-		jQuery(recorder).triggerHandler('change');
-	};
-
-	Wicket.Palette.clearSelectionHelper=function(box) {
-		for (var i=0;i<box.options.length;i++) {
-			box.options[i].selected=false;
-		}
-	};
-
-	Wicket.Palette.addAll = function(choicesId, selectionId, recorderId) {
-		var palette = Wicket.Palette;
-		var choices = palette.$(choicesId);
-		var selection = palette.$(selectionId);
-
-		if (palette.moveAllHelper(choices, selection)) {
-			var recorder = palette.$(recorderId);
-			palette.updateRecorder(selection, recorder);
-		}
-	};
-
-	Wicket.Palette.removeAll = function(choicesId, selectionId, recorderId) {
-		var palette = Wicket.Palette;
-		var choices = palette.$(choicesId);
-		var selection = palette.$(selectionId);
-
-		if (palette.moveAllHelper(selection, choices)) {
-			var recorder = palette.$(recorderId);
-			palette.updateRecorder(selection, recorder);
-		}
-	};
-
-	Wicket.Palette.moveAllHelper = function(source, dest) {
-		var dirty = false;
-		for (var i = 0;i < source.options.length; i++) {
-			dest.appendChild(source.options[i]);
-			i--;
-			dirty = true;
-		}
-		return dirty;
-	};
+	}
 })();

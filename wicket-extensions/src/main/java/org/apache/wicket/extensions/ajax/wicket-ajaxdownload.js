@@ -63,7 +63,7 @@
 					window.location.assign(settings.downloadUrl);
 					checkComplete({
 						html: function() {
-							return jQuery();
+							return {};
 						},
 						
 						dismiss: function(result) {
@@ -74,7 +74,7 @@
 				var wo = window.open(settings.downloadUrl);
 				checkComplete({
 					html: function() {
-						return jQuery(wo ? wo.document : undefined).find('body').html();
+						return wo ? wo.document.body.innerHTML : undefined;
 					},
 					
 					dismiss: function(result) {
@@ -84,21 +84,23 @@
 					}
 				});
 			} else if (settings.method === 'iframe') {
-				var frame = jQuery("<iframe></iframe>").hide().prop("src", settings.downloadUrl).appendTo("body");
+				var frame = document.createElement('iframe');
+				frame.setAttribute('src', settings.downloadUrl);
+				frame.setAttribute('style', 'display: none;');
+				document.body.appendChild(frame);
 				checkComplete({
 					html: function() {
-						return frame.contents().find('body').html();
+						return frame.document ? frame.document.body.innerHTML : undefined;
 					},
 					
 					dismiss: function() {
 						// don't remove iframe immediately
 						setTimeout(function () {
-							frame.remove();
+							frame.parentElement.removeChild(frame);
 						}, 0);
 					}
 				});
 			} else {
-				// jquery does not support binary download
 				var xhr = new XMLHttpRequest();
 
 				xhr.open("GET", settings.downloadUrl);
@@ -123,13 +125,12 @@
 
 							var blobUrl = (window.URL || window.webkitURL).createObjectURL(blob);
 
-							var anchor = jQuery("<a></a>")
-								.prop("href", blobUrl)
-								.prop("download", filename)
-								.appendTo("body")
-								.hide();
-
-							anchor[0].click();
+							var anchor = document.createElement('a');
+							anchor.setAttribute('href', blobUrl);
+							anchor.setAttribute('download', filename);
+							anchor.setAttribute('style', 'display: none;');
+							document.body.appendChild(anchor);
+							anchor.click();
 
 							setTimeout(function () {
 								URL.revokeObjectURL(blobUrl);
