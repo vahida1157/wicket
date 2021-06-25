@@ -142,6 +142,7 @@
 		<commons-collections.version>3.2.2</commons-collections.version>
 		<commons-collections4.version>4.4</commons-collections4.version>
 		<commons-fileupload.version>1.4</commons-fileupload.version>
+<!--		<commons-fileupload.version>0.68.0.1</commons-fileupload.version>-->
 		<commons-io.version>2.8.0</commons-io.version>
 		<commons-lang3.version>3.12.0</commons-lang3.version>
 		<guice.version>4.2.3</guice.version>
@@ -169,7 +170,7 @@
 		<mockito.version>3.11.1</mockito.version>
 		<objenesis.version>3.2</objenesis.version>
 		<openjson.version>1.0.12</openjson.version>
-		<slf4j.version>1.7.25</slf4j.version>
+		<slf4j.version>2.0.0-alpha1</slf4j.version>
 		<spring.version>5.3.8</spring.version>
 		<wagon-ssh-external.version>3.4.3</wagon-ssh-external.version>
 		<weld.version>3.1.7.Final</weld.version>
@@ -286,10 +287,12 @@
 			</dependency>
 			<dependency>
 				<groupId>commons-fileupload</groupId>
+<!--				<groupId>com.jwebmp.jpms.commons</groupId>-->
 				<artifactId>commons-fileupload</artifactId>
 				<version>${commons-fileupload.version}</version>
 				<exclusions>
 					<exclusion>
+<!--						<groupId>com.jwebmp.jpms.commons</groupId>-->
 						<groupId>commons-io</groupId>
 						<artifactId>commons-io</artifactId>
 					</exclusion>
@@ -1100,6 +1103,7 @@
 						<argLine>--add-opens java.base/jdk.internal.loader=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED
 							--add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED
 							--add-modules=ALL-SYSTEM</argLine>
+						<useModulePath>false</useModulePath>
 					</configuration>
 				</plugin>
 				<plugin>
